@@ -63,18 +63,23 @@ HTML
         background-color: rgb(0, 0, 0, 0.05);
     }
 
-    .box {
-        height: 400pt;
+    .box1 {
+        height: 50pt;
+        background-color: lightcoral;
+    }
+
+    .box2 {
+        height: 350pt;
         background-color: lightblue;
     }
 </style>
 </head>
-<body><div class="box"></div></body>
+<body><div class="box1"></div><div class="box2"></div></body>
 </html>
 HTML
 ,
                 2,
-                ["box" => 2]
+                ["box1" => 1, "box2" => 2]
             ],
         ];
     }

@@ -875,6 +875,22 @@ class Frame
         return $this->_is_cache["inline_level"] = in_array($display, Style::INLINE_LEVEL_TYPES, true);
     }
 
+    public function is_table_row_or_group(): bool
+    {
+        if (isset($this->_is_cache["table_row_or_group"])) {
+            return $this->_is_cache["table_row_or_group"];
+        }
+
+        $display = $this->get_style()->display;
+
+        return $this->_is_cache["table_row_or_group"] = in_array($display, [
+            "table-row",
+            "table-row-group",
+            "table-header-group",
+            "table-footer-group"
+        ], true);
+    }
+
     /**
      * @return bool
      */
@@ -913,6 +929,12 @@ class Frame
         $display = $this->get_style()->display;
 
         return $this->_is_cache["table"] = in_array($display, Style::TABLE_TYPES, true);
+    }
+
+    public function is_outside_marker(): bool
+    {
+        $style = $this->get_style();
+        return $style->display === "-dompdf-list-bullet" && $style->list_style_position === "outside";
     }
 
 

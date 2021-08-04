@@ -35,7 +35,10 @@ class TableRowGroup extends AbstractFrameReflower
     {
         /** @var TableRowGroupFrameDecorator */
         $frame = $this->_frame;
+
+        // Check if a page break is forced
         $page = $frame->get_root();
+        $page->check_forced_page_break($frame);
 
         // Counters and generated content
         $this->_set_content();
