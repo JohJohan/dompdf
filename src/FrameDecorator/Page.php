@@ -524,6 +524,108 @@ class Page extends AbstractFrameDecorator
         }
     }
 
+    protected function isEmptyTextNode(Frame $frame): bool
+    {
+        // Checking for the empty string without trimming only works for
+        // previous frames that already had a reflow, because superfluous white
+        // space is then already trimmed
+        return $frame->is_text_node()
+            && (($frame->is_pre() && $frame->get_node()->nodeValue === "") || trim($frame->get_node()->nodeValue) === "");
+    }
+
+    protected function isOutsideMarker(Frame $frame): bool
+    {
+        $style = $frame->get_style();
+        return $style->display === "-dompdf-list-bullet"
+            && $style->list_style_position = "outside";
+    }
+
+    protected function prevSibling(Frame $frame): ?Frame
+    {
+        $prev = $frame->get_prev_sibling();
+        while ($prev && ($this->isEmptyTextNode($prev) || $this->isOutsideMarker($prev) || $frame->is_absolute())) {
+            $prev = $prev->get_prev_sibling();
+        }
+
+        return $prev;
+    }
+
+    protected function nextSibling(Frame $frame): ?Frame
+    {
+        $next = $frame->get_next_sibling();
+        while ($next && ($this->isEmptyTextNode($next) || $frame->is_absolute())) {
+            $next = $next->get_next_sibling();
+        }
+
+        return $next;
+    }
+
+    private function marginBottom(Frame $frame): float
+    {
+        if ($frame->is_inline_level()) {
+            return 0.0;
+        }
+
+        $style = $frame->get_style();
+        $cbw = $frame->get_containing_block("w");
+        return (float) $style->length_in_pt($style->margin_bottom, $cbw);
+    }
+
+    /**
+     * Check whether the given frame fits onto the page.
+     *
+     * * https://www.w3.org/TR/CSS21/page.html#allowed-page-breaks
+     * * https://www.w3.org/TR/css-break-3/#valdef-box-decoration-break-slice
+     *
+     * @param Frame $frame
+     * @return bool
+     */
+    protected function fitsOnPage(Frame $frame): bool
+    {
+        $body = $this->get_first_child();
+        $marginHeight = $frame->get_margin_height();
+        $marginBottom = $this->marginBottom($frame);
+        $hasNext = $this->nextSibling($frame) !== null;
+        $nextFound = $hasNext;
+
+        // Determine the frame's maximum y value under the assumption that a
+        // break is to occur after it. If it has a next child (non-absolute),
+        // the bottom margin is to be treated as 0, as it would be cleared after
+        // a break
+        $marginDiff = $hasNext ? $marginBottom : 0;
+        $maxY = (float) $frame->get_position("y") + $marginHeight - $marginDiff;
+
+        // For parents with `box-decoration-break: slice`, their bottom padding,
+        // border, and margin need to only be added until we have found any next
+        // (non-absolute) sibling
+        $p = $frame->get_parent();
+        while ($p && $p !== $this) {
+            $boxDecoClone = $p === $body;
+            $fitBoxDecoration = !$nextFound || $boxDecoClone;
+
+            $hasNext = $this->nextSibling($p) !== null;
+            $nextFound = $hasNext || $nextFound;
+            $fitBottomMargin = !$nextFound || ($boxDecoClone && !$hasNext) || $p === $body;
+
+            if ($fitBoxDecoration) {
+                $style = $p->get_style();
+                $cbw = $p->get_containing_block("w");
+                $maxY += (float) $style->length_in_pt([
+                    $style->padding_bottom,
+                    $style->border_bottom_width
+                ], $cbw);
+            }
+
+            if ($fitBottomMargin) {
+                $maxY += $this->marginBottom($p);
+            }
+
+            $p = $p->get_parent();
+        }
+
+        return Helpers::lengthLessOrEqual($maxY, $this->bottom_page_edge);
+    }
+
     /**
      * Check if $frame will fit on the page.  If the frame does not fit,
      * the frame tree is modified so that a page break occurs in the
@@ -558,23 +660,9 @@ class Page extends AbstractFrameDecorator
             }
         } while ($p = $p->get_parent());
 
-        $margin_height = $frame->get_margin_height();
-
-        // Determine the frame's maximum y value
-        $max_y = (float)$frame->get_position("y") + $margin_height;
-
-        // If a split is to occur here, then the bottom margins & paddings of all
-        // parents of $frame must fit on the page as well:
-        $p = $frame->get_parent();
-        while ($p && $p !== $this) {
-            $cbw = $p->get_containing_block("w");
-            $max_y += (float) $p->get_style()->computed_bottom_spacing($cbw);
-            $p = $p->get_parent();
-        }
-
-        // Check if $frame flows off the page
-        if (Helpers::lengthLessOrEqual($max_y, $this->bottom_page_edge)) {
-            // no: do nothing
+        // If the current frame does not flow off the page, no page break occurs
+        // at this time
+        if ($this->fitsOnPage($frame)) {
             return false;
         }
 

@@ -1533,9 +1533,9 @@ class Style
 
     /**
      * @param float $cbw The width of the containing block.
-     * @return float|string|null
+     * @return float
      */
-    public function computed_bottom_spacing(float $cbw)
+    public function computed_bottom_spacing(?float $cbw = null): float
     {
         // Caching the bottom spacing independently of the given width is a bit
         // iffy, but should be okay, as the containing block should only
@@ -1544,11 +1544,11 @@ class Style
         if ($this->_computed_bottom_spacing !== null) {
             return $this->_computed_bottom_spacing;
         }
-        return $this->_computed_bottom_spacing = $this->length_in_pt(
+        return $this->_computed_bottom_spacing = (float) $this->length_in_pt(
             [
-                $this->margin_bottom,
                 $this->padding_bottom,
-                $this->border_bottom_width
+                $this->border_bottom_width,
+                $this->margin_bottom
             ],
             $cbw
         );
