@@ -584,46 +584,66 @@ class Page extends AbstractFrameDecorator
     {
         $body = $this->get_first_child();
         $marginHeight = $frame->get_margin_height();
-        $marginBottom = $this->marginBottom($frame);
-        $hasNext = $this->nextSibling($frame) !== null;
-        $nextFound = $hasNext;
+        $marginDiff = $this->marginBottom($frame);
 
         // Determine the frame's maximum y value under the assumption that a
-        // break is to occur after it. If it has a next child (non-absolute),
-        // the bottom margin is to be treated as 0, as it would be cleared after
-        // a break
-        $marginDiff = $hasNext ? $marginBottom : 0;
+        // break is to occur after it. Treat the bottom margin as 0, as it would
+        // be cleared after a break
+        // TODO: Maybe don't treat the bottom margin as 0, if the parent is the
+        // body. Effective result now: The last bottom margin in the document
+        // does not need to fit. But maybe this is even desirable
         $maxY = (float) $frame->get_position("y") + $marginHeight - $marginDiff;
 
-        // For parents with `box-decoration-break: slice`, their bottom padding,
-        // border, and margin need to only be added until we have found any next
-        // (non-absolute) sibling
-        $p = $frame->get_parent();
-        while ($p && $p !== $this) {
-            $boxDecoClone = $p === $body;
-            $fitBoxDecoration = !$nextFound || $boxDecoClone;
+        // For parents with `box-decoration-break: slice`, their bottom padding
+        // and border need to only be added if this is the last child
+        // TODO: With support for `box-decoration-break: clone`, the last part
+        // of the check would become `!$hasNext || $boxDecoClone`
+        // $p = $frame->get_parent();
+        // while ($p !== $body) {
+        //     $boxDecoClone = false;
 
-            $hasNext = $this->nextSibling($p) !== null;
-            $nextFound = $hasNext || $nextFound;
-            $fitBottomMargin = !$nextFound || ($boxDecoClone && !$hasNext) || $p === $body;
+        //     if ($boxDecoClone) {
+        //         $style = $p->get_style();
+        //             $cbw = $p->get_containing_block("w");
+        //             $maxY += (float) $style->length_in_pt([
+        //             $style->padding_bottom,
+        //             $style->border_bottom_width
+        //         ], $cbw);
+        //     }
 
-            if ($fitBoxDecoration) {
-                $style = $p->get_style();
-                $cbw = $p->get_containing_block("w");
-                $maxY += (float) $style->length_in_pt([
-                    $style->padding_bottom,
-                    $style->border_bottom_width
-                ], $cbw);
-            }
+        //     $hasNext = $this->nextSibling($p) !== null;
+        //     if (!$hasNext) {
+        //         break;
+        //     }
+        // }
 
-            if ($fitBottomMargin) {
-                $maxY += $this->marginBottom($p);
-            }
-
-            $p = $p->get_parent();
-        }
+        // Always check the body's bottom spacing. It is treated as implicit
+        // `box-decoration-break: clone` and does not clear its bottom margin
+        // on a page break
+        $cbw = $body->get_containing_block("w");
+        $maxY += $body->get_style()->computed_bottom_spacing($cbw);
 
         return Helpers::lengthLessOrEqual($maxY, $this->bottom_page_edge);
+    }
+
+    protected function deepestLastChild(Frame $frame): Frame
+    {
+        $last = $frame;
+
+        while ($last && $last->get_style()->display !== "table-row") {
+            $l = $last->get_last_child();
+            while ($l && $this->isEmptyTextNode($l)) {
+                $l = $l->get_prev_sibling();
+            }
+
+            if ($l) {
+                $last = $l;
+            } else {
+                break;
+            }
+        }
+
+        return $last;
     }
 
     /**
@@ -669,9 +689,11 @@ class Page extends AbstractFrameDecorator
         Helpers::dompdf_debug("page-break", "check_page_break");
         Helpers::dompdf_debug("page-break", "in_table: " . $this->_in_table);
 
-        // yes: determine page break location
-        $iter = $frame;
-        $flg = false;
+        // Determine page break location
+        // Start with the deepest last child, as it is just the box decoration
+        // of the current frame that might not fit
+        $iter = $this->deepestLastChild($frame);
+        $flg = true;
         $pushed_flg = false;
 
         $in_table = $this->_in_table;
@@ -698,16 +720,24 @@ class Page extends AbstractFrameDecorator
                 return true;
             }
 
-            if (!$flg && $next = $iter->get_last_child()) {
-                Helpers::dompdf_debug("page-break", "following last child.");
-
-                if ($next->is_table()) {
-                    $this->_in_table++;
+            if (!$flg) {
+                $next = $iter->get_last_child();
+                // Skip empty text nodes
+                while ($next && $next->is_text_node() && $next->get_node()->nodeValue === "") {
+                    $next = $next->get_prev_sibling();
                 }
 
-                $iter = $next;
-                $pushed_flg = false;
-                continue;
+                if ($next && $next !== $frame) {
+                    Helpers::dompdf_debug("page-break", "following last child.");
+
+                    if ($next->is_table()) {
+                        $this->_in_table++;
+                    }
+
+                    $iter = $next;
+                    $pushed_flg = false;
+                    continue;
+                }
             }
 
             if ($pushed_flg) {
