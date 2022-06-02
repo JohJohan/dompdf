@@ -2,6 +2,7 @@
 
 namespace Dompdf;
 
+use Dompdf\Css\OuterDisplay;
 use Dompdf\Css\Style;
 use Dompdf\Frame\FrameListIterator;
 
@@ -850,13 +851,7 @@ class Frame
      */
     public function is_block_level(): bool
     {
-        if (isset($this->_is_cache["block_level"])) {
-            return $this->_is_cache["block_level"];
-        }
-
-        $display = $this->get_style()->display;
-
-        return $this->_is_cache["block_level"] = in_array($display, Style::BLOCK_LEVEL_TYPES, true);
+        return $this->get_style()->getOuterDisplay() === OuterDisplay::BLOCK;
     }
 
     /**
@@ -866,13 +861,28 @@ class Frame
      */
     public function is_inline_level(): bool
     {
-        if (isset($this->_is_cache["inline_level"])) {
-            return $this->_is_cache["inline_level"];
-        }
+        return $this->get_style()->getOuterDisplay() === OuterDisplay::INLINE;
+    }
 
-        $display = $this->get_style()->display;
+    /**
+     * Whether the frame has a table-internal display type.
+     *
+     * @return bool
+     */
+    public function is_table_internal(): bool
+    {
+        return $this->get_style()->getOuterDisplay() === OuterDisplay::TABLE_INTERNAL;
+    }
 
-        return $this->_is_cache["inline_level"] = in_array($display, Style::INLINE_LEVEL_TYPES, true);
+    /**
+     * Whether the frame has a special display type (outside list marker, not
+     * displayed etc.).
+     *
+     * @return bool
+     */
+    public function is_other_display(): bool
+    {
+        return $this->get_style()->getOuterDisplay() === OuterDisplay::OTHER;
     }
 
     /**
@@ -914,7 +924,6 @@ class Frame
 
         return $this->_is_cache["table"] = in_array($display, Style::TABLE_TYPES, true);
     }
-
 
     /**
      * Inserts a new child at the beginning of the Frame

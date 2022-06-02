@@ -261,6 +261,14 @@ class Style
     ];
 
     /**
+     * Lookup table for valid display types. Initially computed from the
+     * different constants.
+     *
+     * @var array
+     */
+    protected static $validDisplayTypes = [];
+
+    /**
      * List of all inline (inner) display types.
      */
     public const INLINE_TYPES = ["inline"];
@@ -274,14 +282,6 @@ class Style
      * List of all table (inner) display types.
      */
     public const TABLE_TYPES = ["table", "inline-table"];
-
-    /**
-     * Lookup table for valid display types. Initially computed from the
-     * different constants.
-     *
-     * @var array
-     */
-    protected static $valid_display_types = [];
 
     /**
      * List of all positioned types.
@@ -841,21 +841,21 @@ class Style
             }
 
             // Compute valid display-type lookup table
-            self::$valid_display_types = [
-                "none"                => true,
-                "-dompdf-br"          => true,
-                "-dompdf-image"       => true,
-                "-dompdf-list-bullet" => true,
-                "-dompdf-page"        => true
+            self::$validDisplayTypes = [
+                "none"                => OuterDisplay::OTHER,
+                "-dompdf-br"          => OuterDisplay::INLINE,
+                "-dompdf-image"       => OuterDisplay::OTHER,
+                "-dompdf-list-bullet" => OuterDisplay::OTHER,
+                "-dompdf-page"        => OuterDisplay::OTHER
             ];
             foreach (self::BLOCK_LEVEL_TYPES as $val) {
-                self::$valid_display_types[$val] = true;
+                self::$validDisplayTypes[$val] = OuterDisplay::BLOCK;
             }
             foreach (self::INLINE_LEVEL_TYPES as $val) {
-                self::$valid_display_types[$val] = true;
+                self::$validDisplayTypes[$val] = OuterDisplay::INLINE;
             }
             foreach (self::TABLE_INTERNAL_TYPES as $val) {
-                self::$valid_display_types[$val] = true;
+                self::$validDisplayTypes[$val] = OuterDisplay::TABLE_INTERNAL;
             }
         }
     }
@@ -942,6 +942,20 @@ class Style
     {
         $float = $this->__get("float");
         return $float === "none" && !$this->is_absolute();
+    }
+
+    public function getOuterDisplay(): int
+    {
+        $display = $this->__get("display");
+
+        if ($display === "-dompdf-list-bullet") {
+            $position = $this->__get("list_style_position");
+            return $position === "inside"
+                ? OuterDisplay::INLINE
+                : OuterDisplay::OTHER;
+        }
+
+        return self::$validDisplayTypes[$display];
     }
 
     /**
@@ -2365,7 +2379,7 @@ class Style
                 break;
         }
 
-        if (!isset(self::$valid_display_types[$val])) {
+        if (!isset(self::$validDisplayTypes[$val])) {
             return null;
         }
 

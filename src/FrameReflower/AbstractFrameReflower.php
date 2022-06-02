@@ -390,9 +390,15 @@ abstract class AbstractFrameReflower
             $inline_max = 0;
 
             // Add all adjacent inline widths together to calculate max width
-            while ($iter->valid() && ($iter->current()->is_inline_level() || $iter->current()->get_style()->display === "-dompdf-image")) {
+            while ($iter->valid()) {
                 /** @var AbstractFrameDecorator */
                 $child = $iter->current();
+                $display = $child->get_style()->display;
+
+                if ($child->is_block_level() || $display === "-dompdf-br") {
+                    break;
+                }
+
                 $child->get_reflower()->_set_content();
                 $minmax = $child->get_min_max_width();
 
