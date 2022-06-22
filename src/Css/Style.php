@@ -102,7 +102,7 @@ use Dompdf\Frame;
  * @property float           $letter_spacing              Length in pt
  * @property float           $line_height                 Length in pt
  * @property string          $list_style_image            Image URL or `none`
- * @property string          $list_style_position
+ * @property string          $list_style_position         `inside` or `outside`
  * @property string          $list_style_type
  * @property float|string    $margin_right                Length in pt, a percentage value, or `auto`
  * @property float|string    $margin_left                 Length in pt, a percentage value, or `auto`
@@ -3325,6 +3325,14 @@ class Style
         } else {
             return "url($parsed_val)";
         }
+    }
+
+    /**
+     * @link https://www.w3.org/TR/CSS21/generate.html#propdef-list-style-position
+     */
+    protected function _compute_list_style_position(string $val)
+    {
+        return $val === "inside" || $val === "outside" ? $val : null;
     }
 
     /**
