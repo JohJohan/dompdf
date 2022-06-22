@@ -126,9 +126,9 @@ use Dompdf\Frame;
  * @property float|string    $padding_bottom              Length in pt or a percentage value
  * @property float|string    $padding_left                Length in pt or a percentage value
  * @property string          $padding                     Only use for setting all sides to the same length
- * @property string          $page_break_after
- * @property string          $page_break_before
- * @property string          $page_break_inside
+ * @property string          $page_break_after            `auto`, `avoid`, `always`, `left`, or `right`
+ * @property string          $page_break_before           `auto`, `avoid`, `always`, `left`, or `right`
+ * @property string          $page_break_inside           `auto` or `avoid`
  * @property string          $pause_after
  * @property string          $pause_before
  * @property string          $pause
@@ -2821,25 +2821,29 @@ class Style
     /**
      * @link https://www.w3.org/TR/CSS21/page.html#propdef-page-break-before
      */
-    protected function _compute_page_break_before(string $break)
+    protected function _compute_page_break_before(string $val)
     {
-        if ($break === "left" || $break === "right") {
-            $break = "always";
-        }
-
-        return $break;
+        return \in_array($val, ["auto", "avoid", "always", "left", "right"], true)
+            ? $val
+            : null;
     }
 
     /**
      * @link https://www.w3.org/TR/CSS21/page.html#propdef-page-break-after
      */
-    protected function _compute_page_break_after(string $break)
+    protected function _compute_page_break_after(string $val)
     {
-        if ($break === "left" || $break === "right") {
-            $break = "always";
-        }
+        return \in_array($val, ["auto", "avoid", "always", "left", "right"], true)
+            ? $val
+            : null;
+    }
 
-        return $break;
+    /**
+     * @link https://www.w3.org/TR/CSS21/page.html#propdef-page-break-inside
+     */
+    protected function _compute_page_break_inside(string $val)
+    {
+        return \in_array($val, ["auto", "avoid"], true) ? $val : null;
     }
 
     /**
