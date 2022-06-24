@@ -150,20 +150,12 @@ abstract class AbstractFrameReflower
 
         // Collapse vertical margins:
         $n = $frame->get_next_sibling();
-        if ( $n && !($n->is_block_level() && $n->is_in_flow()) ) {
-            while ($n = $n->get_next_sibling()) {
-                if ($n->is_block_level() && $n->is_in_flow()) {
-                    break;
-                }
-
-                if (!$n->get_first_child()) {
-                    $n = null;
-                    break;
-                }
-            }
+        while ($n && (!$n->is_in_flow() || $n->is_other_display())) {
+            $n = $n->get_next_sibling();
         }
 
-        if ($n) {
+        // Margins are collapsed only between block-level boxes
+        if ($n && $n->is_block_level()) {
             $n_style = $n->get_style();
             $n_t = (float)$n_style->length_in_pt($n_style->margin_top, $cb["w"]);
 
@@ -175,21 +167,12 @@ abstract class AbstractFrameReflower
         // Collapse our first child's margin, if there is no border or padding
         if ($style->border_top_width == 0 && $style->length_in_pt($style->padding_top) == 0) {
             $f = $this->_frame->get_first_child();
-            if ( $f && !($f->is_block_level() && $f->is_in_flow()) ) {
-                while ($f = $f->get_next_sibling()) {
-                    if ($f->is_block_level() && $f->is_in_flow()) {
-                        break;
-                    }
-
-                    if (!$f->get_first_child()) {
-                        $f = null;
-                        break;
-                    }
-                }
+            while ($f && (!$f->is_in_flow() || $f->is_other_display())) {
+                $f = $f->get_next_sibling();
             }
 
             // Margins are collapsed only between block-level boxes
-            if ($f) {
+            if ($f && $f->is_block_level()) {
                 $f_style = $f->get_style();
                 $f_t = (float)$f_style->length_in_pt($f_style->margin_top, $cb["w"]);
 
@@ -202,21 +185,12 @@ abstract class AbstractFrameReflower
         // Collapse our last child's margin, if there is no border or padding
         if ($style->border_bottom_width == 0 && $style->length_in_pt($style->padding_bottom) == 0) {
             $l = $this->_frame->get_last_child();
-            if ( $l && !($l->is_block_level() && $l->is_in_flow()) ) {
-                while ($l = $l->get_prev_sibling()) {
-                    if ($l->is_block_level() && $l->is_in_flow()) {
-                        break;
-                    }
-
-                    if (!$l->get_last_child()) {
-                        $l = null;
-                        break;
-                    }
-                }
+            while ($l && (!$l->is_in_flow() || $l->is_other_display())) {
+                $l = $l->get_next_sibling();
             }
 
             // Margins are collapsed only between block-level boxes
-            if ($l) {
+            if ($l && $l->is_block_level()) {
                 $l_style = $l->get_style();
                 $l_b = (float)$l_style->length_in_pt($l_style->margin_bottom, $cb["w"]);
 
