@@ -70,4 +70,45 @@ class TableRowGroup extends AbstractFrameDecorator
         $cellmap->update_row_group($this, $child->get_prev_sibling());
         parent::split($child, $page_break, $forced);
     }
+
+    public function normalize(): void
+    {
+        /** @var AbstractFrameDecorator[] */
+        $children = iterator_to_array($this->get_children());
+        $tr = null;
+
+        foreach ($children as $child) {
+            $display = $child->get_style()->display;
+
+            if ($display === "table-row") {
+                // Reset anonymous tr
+                $tr = null;
+                continue;
+            }
+
+            // Remove empty text nodes between valid children
+            if ($this->isEmptyTextNode($child)) {
+                $this->remove_child($child);
+                continue;
+            }
+
+            // Catch consecutive misplaced frames within a single anonymous row
+            if ($tr === null) {
+                $tr = $this->createAnonymousChild("tr", "table-row");
+                $this->insert_child_before($tr, $child);
+            }
+
+            $tr->append_child($child);
+        }
+
+        // Handle empty row group: Make sure there is at least one row
+        if (!$this->get_first_child()) {
+            $tr = $this->createAnonymousChild("tr", "table-row");
+            $this->append_child($tr);
+        }
+
+        foreach ($this->get_children() as $child) {
+            $child->normalize();
+        }
+    }
 }

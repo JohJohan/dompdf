@@ -7,6 +7,7 @@
  */
 namespace Dompdf\FrameDecorator;
 
+use Dompdf\Css\OuterDisplay;
 use Dompdf\Dompdf;
 use Dompdf\Frame;
 use Dompdf\LineBox;
@@ -63,6 +64,101 @@ class Block extends AbstractFrameDecorator
         $this->_line_boxes = [new LineBox($this)];
         $this->_cl = 0;
         $this->dangling_markers = [];
+    }
+
+    /**
+     * Normalize the structure of the frame's subtree.
+     *
+     * The tree is in one of two modes after normalization:
+     * * Inline: There are only inline-level, out-of-flow block, and other
+     *   display types
+     * * Block: There are only block-level and other display types
+     *
+     * https://www.w3.org/TR/CSS21/visuren.html#anonymous-block-level
+     *
+     * @param bool $firstPass
+     */
+    public function normalize(bool $firstPass = true): void
+    {
+        // Determine whether child content is in inline mode (i.e. no
+        // in-flow block-level children)
+        $inline = true;
+
+        foreach ($this->get_children() as $child) {
+            if (($child->is_block_level() && $child->is_in_flow())
+                || $child->is_table_internal()
+            ) {
+                $inline = false;
+                break;
+            }
+        }
+
+        if (!$inline) {
+            /** @var AbstractFrameDecorator[] */
+            $children = iterator_to_array($this->get_children());
+            $block = null;
+            $table = null;
+
+            // TODO: Okay to handle `-dompdf-image` as OTHER?
+            foreach ($children as $child) {
+                $outerDisplay = $child->get_style()->getOuterDisplay();
+
+                if ($outerDisplay === OuterDisplay::BLOCK
+                    || $outerDisplay === OuterDisplay::OTHER
+                ) {
+                    // Reset anonymous block/table
+                    $block = null;
+                    $table = null;
+                    continue;
+                }
+
+                if ($this->isEmptyTextNode($child)) {
+                    $this->remove_child($child);
+                    continue;
+                }
+
+                // Catch consecutive inline frames within a single anonymous
+                // block container
+                if ($outerDisplay === OuterDisplay::INLINE) {
+                    // Reset anonymous table
+                    $table = null;
+
+                    if ($block === null) {
+                        $block = $this->createAnonymousChild("div", "block");
+                        $this->insert_child_before($block, $child);
+                    }
+
+                    $block->append_child($child);
+                    continue;
+                }
+
+                // Catch consecutive table-internal frames within a single
+                // anonymous table
+                if ($outerDisplay === OuterDisplay::TABLE_INTERNAL) {
+                    // Reset anonymous block
+                    $block = null;
+
+                    if ($table === null) {
+                        $table = $this->createAnonymousChild("table", "table");
+                        $this->insert_child_before($table, $child);
+                    }
+
+                    $table->append_child($child);
+                }
+            }
+        }
+
+        if ($firstPass) {
+            foreach ($this->get_children() as $child) {
+                $child->normalize();
+            }
+
+            // Do a second pass without normalizing children to account for
+            // inline normalization moving inline frames to the parent
+            if ($inline) {
+                $this->normalize(false);
+            }
+        }
     }
 
     /**

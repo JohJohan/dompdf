@@ -62,7 +62,7 @@ class Factory
      * @param Frame $root    The root of the frame
      *
      * @throws Exception
-     * @return AbstractFrameDecorator
+     * @return AbstractFrameDecorator|null
      * FIXME: this is admittedly a little smelly...
      */
     static function decorate_frame(Frame $frame, Dompdf $dompdf, Frame $root = null)
@@ -166,7 +166,7 @@ class Factory
                 if ($style->_dompdf_keep !== "yes") {
                     // Remove the node and the frame
                     $frame->get_parent()->remove_child($frame);
-                    return;
+                    return null;
                 }
 
                 $positioner = "NullPositioner";

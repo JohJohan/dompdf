@@ -32,6 +32,56 @@ class Inline extends AbstractFrameDecorator
     }
 
     /**
+     * Normalize the structure of the frame's subtree.
+     *
+     * All block-level children are moved up until child of a block container.
+     * The inline frame itself is split as necessary.
+     *
+     * https://www.w3.org/TR/CSS21/visuren.html#anonymous-block-level
+     *
+     * @param bool $firstPass
+     */
+    public function normalize(bool $firstPass = true): void
+    {
+        foreach ($this->get_children() as $child) {
+            if (($child->is_block_level() && $child->is_in_flow())
+                || $child->is_table_internal()
+            ) {
+                $parent = $this->get_parent();
+                $prev = $child->get_prev_sibling();
+                $next = $child->get_next_sibling();
+
+                // TODO Always split (according to spec)
+                if ($prev && $next) {
+                    $this->split($next);
+                }
+
+                if ($prev || !$next) {
+                    $parent->insert_child_after($child, $this);
+                } else {
+                    $parent->insert_child_before($child, $this);
+
+                    // Normalize the child explicitly here, as it is inserted
+                    // before the current node, and will not be caught by in the
+                    // parent's child iteration
+                    $child->normalize();
+                }
+                break;
+            }
+        }
+
+        if ($firstPass) {
+            foreach ($this->get_children() as $child) {
+                $child->normalize();
+            }
+
+            // Do a second pass without normalizing children to account for
+            // inline normalization moving block frames to the parent
+            $this->normalize(false);
+        }
+    }
+
+    /**
      * Vertical padding, border, and margin do not apply when determining the
      * height for inline frames.
      *

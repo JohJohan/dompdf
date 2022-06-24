@@ -107,7 +107,6 @@ class Table extends AbstractFrameDecorator
 
             // Insert copies of the table headers before $child
             foreach ($this->_headers as $header) {
-
                 $new_header = $header->deep_copy();
 
                 if (is_null($first_header)) {
@@ -118,21 +117,7 @@ class Table extends AbstractFrameDecorator
             }
 
             parent::split($first_header, $page_break, $forced);
-
-        } elseif (in_array($child->get_style()->display, self::ROW_GROUPS, true)) {
-
-            // Individual rows should have already been handled
-            parent::split($child, $page_break, $forced);
-
         } else {
-
-            $iter = $child;
-
-            while ($iter) {
-                $this->_cellmap->remove_row($iter);
-                $iter = $iter->get_next_sibling();
-            }
-
             parent::split($child, $page_break, $forced);
         }
     }
@@ -161,39 +146,17 @@ class Table extends AbstractFrameDecorator
     //........................................................................
 
     /**
-     * Check for text nodes between valid table children that only contain white
-     * space, except if white space is to be preserved.
+     * Restructure the subtree so that the table has the correct structure.
      *
-     * @param AbstractFrameDecorator $frame
-     *
-     * @return bool
-     */
-    private function isEmptyTextNode(AbstractFrameDecorator $frame): bool
-    {
-        // This is based on the white-space pattern in `FrameReflower\Text`,
-        // i.e. only match on collapsible white space
-        $wsPattern = '/^[^\S\xA0\x{202F}\x{2007}]*$/u';
-        $validChildOrNull = function ($frame) {
-            return $frame === null
-                || in_array($frame->get_style()->display, self::VALID_CHILDREN, true);
-        };
-
-        return $frame->is_text_node() && !$frame->is_pre()
-            && preg_match($wsPattern, $frame->get_text())
-            && $validChildOrNull($frame->get_prev_sibling())
-            && $validChildOrNull($frame->get_next_sibling());
-    }
-
-    /**
-     * Restructure tree so that the table has the correct structure. Misplaced
-     * children are appropriately wrapped in anonymous row groups, rows, and
-     * cells.
+     * Misplaced children are appropriately wrapped in anonymous row groups,
+     * rows, and cells.
      *
      * https://www.w3.org/TR/CSS21/tables.html#anonymous-boxes
      */
     public function normalize(): void
     {
         $column_caption = ["table-column-group", "table-column", "table-caption"];
+        /** @var AbstractFrameDecorator[] */
         $children = iterator_to_array($this->get_children());
         $tbody = null;
 
@@ -225,7 +188,7 @@ class Table extends AbstractFrameDecorator
 
             // Catch consecutive misplaced frames within a single anonymous group
             if ($tbody === null) {
-                $tbody = $this->create_anonymous_child("tbody", "table-row-group");
+                $tbody = $this->createAnonymousChild("tbody", "table-row-group");
                 $this->insert_child_before($tbody, $child);
             }
 
@@ -234,92 +197,12 @@ class Table extends AbstractFrameDecorator
 
         // Handle empty table: Make sure there is at least one row group
         if (!$this->get_first_child()) {
-            $tbody = $this->create_anonymous_child("tbody", "table-row-group");
+            $tbody = $this->createAnonymousChild("tbody", "table-row-group");
             $this->append_child($tbody);
         }
 
         foreach ($this->get_children() as $child) {
-            $display = $child->get_style()->display;
-
-            if (in_array($display, self::ROW_GROUPS, true)) {
-                $this->normalizeRowGroup($child);
-            }
-        }
-    }
-
-    private function normalizeRowGroup(AbstractFrameDecorator $frame): void
-    {
-        $children = iterator_to_array($frame->get_children());
-        $tr = null;
-
-        foreach ($children as $child) {
-            $display = $child->get_style()->display;
-
-            if ($display === "table-row") {
-                // Reset anonymous tr
-                $tr = null;
-                continue;
-            }
-
-            // Remove empty text nodes between valid children
-            if ($this->isEmptyTextNode($child)) {
-                $frame->remove_child($child);
-                continue;
-            }
-
-            // Catch consecutive misplaced frames within a single anonymous row
-            if ($tr === null) {
-                $tr = $frame->create_anonymous_child("tr", "table-row");
-                $frame->insert_child_before($tr, $child);
-            }
-
-            $tr->append_child($child);
-        }
-
-        // Handle empty row group: Make sure there is at least one row
-        if (!$frame->get_first_child()) {
-            $tr = $frame->create_anonymous_child("tr", "table-row");
-            $frame->append_child($tr);
-        }
-
-        foreach ($frame->get_children() as $child) {
-            $this->normalizeRow($child);
-        }
-    }
-
-    private function normalizeRow(AbstractFrameDecorator $frame): void
-    {
-        $children = iterator_to_array($frame->get_children());
-        $td = null;
-
-        foreach ($children as $child) {
-            $display = $child->get_style()->display;
-
-            if ($display === "table-cell") {
-                // Reset anonymous td
-                $td = null;
-                continue;
-            }
-
-            // Remove empty text nodes between valid children
-            if ($this->isEmptyTextNode($child)) {
-                $frame->remove_child($child);
-                continue;
-            }
-
-            // Catch consecutive misplaced frames within a single anonymous cell
-            if ($td === null) {
-                $td = $frame->create_anonymous_child("td", "table-cell");
-                $frame->insert_child_before($td, $child);
-            }
-
-            $td->append_child($child);
-        }
-
-        // Handle empty row: Make sure there is at least one cell
-        if (!$frame->get_first_child()) {
-            $td = $frame->create_anonymous_child("td", "table-cell");
-            $frame->append_child($td);
+            $child->normalize();
         }
     }
 }

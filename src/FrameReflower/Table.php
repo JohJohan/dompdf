@@ -455,8 +455,6 @@ class Table extends AbstractFrameReflower
         $style = $this->_frame->get_style();
         $cellmap = $this->_frame->get_cellmap();
 
-        $this->_frame->normalize();
-
         // Add the cells to the cellmap (this will calculate column widths as
         // frames are added)
         $cellmap->add_frame($this->_frame);

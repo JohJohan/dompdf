@@ -723,18 +723,25 @@ class Dompdf
         }
 
         $canvas = $this->canvas;
-        $root = null;
+        $rootFrame = $this->tree->get_root();
+        $root = Factory::decorate_root($rootFrame, $this);
 
         foreach ($this->tree as $frame) {
-            // Set up the root frame
-            if (is_null($root)) {
-                $root = Factory::decorate_root($this->tree->get_root(), $this);
+            if ($frame === $rootFrame) {
                 continue;
             }
 
             // Create the appropriate decorators, reflowers & positioners.
             Factory::decorate_frame($frame, $this, $root);
         }
+
+        // TODO Remove debug code
+        $this->tree->debug_print();
+
+        $root->normalize();
+
+        // TODO Remove debug code
+        $this->tree->debug_print();
 
         // Add meta information
         $title = $this->dom->getElementsByTagName("title");

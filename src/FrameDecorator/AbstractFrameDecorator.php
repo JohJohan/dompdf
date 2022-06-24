@@ -215,21 +215,57 @@ abstract class AbstractFrameDecorator extends Frame
     }
 
     /**
+     * Normalize the structure of the frame's subtree.
+     */
+    public function normalize(): void
+    {
+        foreach ($this->get_children() as $child) {
+            $child->normalize();
+        }
+    }
+
+    /**
+     * Check for text nodes between non-inline siblings that only contain white
+     * space, except if white space is to be preserved.
+     *
+     * @param Frame $frame The frame to check.
+     *
+     * @return bool
+     */
+    protected function isEmptyTextNode(Frame $frame): bool
+    {
+        if (!$frame->is_text_node() || $frame->is_pre()) {
+            return false;
+        }
+
+        // This is based on the white-space pattern in `FrameReflower\Text`,
+        // i.e. only match on collapsible white space
+        $wsPattern = '/^[^\S\xA0\x{202F}\x{2007}]*$/u';
+        $prev = $frame->get_prev_sibling();
+        $next = $frame->get_next_sibling();
+
+        return preg_match($wsPattern, $frame->get_node()->data)
+            && ($prev !== null || $next !== null)
+            && ($prev === null || !$prev->is_inline_level())
+            && ($next === null || !$next->is_inline_level());
+    }
+
+    /**
      * Create an anonymous child frame, inheriting styles from this frame.
      *
-     * @param string $node_name
+     * @param string $nodeName
      * @param string $display
      *
-     * @return AbstractFrameDecorator
+     * @return self
      */
-    public function create_anonymous_child(string $node_name, string $display): AbstractFrameDecorator
+    public function createAnonymousChild(string $nodeName, string $display): self
     {
         $style = $this->get_style();
         $child_style = $style->get_stylesheet()->create_style();
         $child_style->set_prop("display", $display);
         $child_style->inherit($style);
 
-        $node = $this->get_node()->ownerDocument->createElement($node_name);
+        $node = $this->get_node()->ownerDocument->createElement($nodeName);
         $frame = new Frame($node);
         $frame->set_style($child_style);
 

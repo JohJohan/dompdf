@@ -324,4 +324,28 @@ class FrameTree implements IteratorAggregate
 
         return $frame_id;
     }
+
+    public function debug_print(): void
+    {
+        // TODO clean this up
+        echo "<pre>";
+
+        foreach ($this as $frame) {
+            $indent = 0;
+            $p = $frame;
+            while ($p = $p->get_parent()) {
+                $indent++;
+            }
+
+            $nodeName = $frame->get_node()->nodeName;
+            $display = $frame->get_style()->display;
+            $flow = $frame->is_in_flow() ? "" : " [out-of-flow]";
+            $text = $frame->is_text_node() ? " <span style='background-color: lightblue;'>" . trim($frame->get_node()->textContent) . "</span>" : "";
+
+            echo str_repeat("\t", $indent) . "$nodeName ($display$flow)$text";
+            echo "\n";
+        }
+
+        echo "</pre>";
+    }
 }
