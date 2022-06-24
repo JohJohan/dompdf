@@ -9,7 +9,6 @@
 namespace Dompdf\Positioner;
 
 use Dompdf\FrameDecorator\AbstractFrameDecorator;
-use Dompdf\FrameDecorator\Table;
 
 /**
  * Positions table cells
@@ -24,7 +23,7 @@ class TableCell extends AbstractPositioner
      */
     function position(AbstractFrameDecorator $frame): void
     {
-        $table = Table::find_parent_table($frame);
+        $table = $frame->find_parent_table();
         $cellmap = $table->get_cellmap();
         $frame->set_position($cellmap->get_frame_position($frame));
     }

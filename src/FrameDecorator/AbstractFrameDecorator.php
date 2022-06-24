@@ -88,6 +88,13 @@ abstract class AbstractFrameDecorator extends Frame
     private $_positioned_parent;
 
     /**
+     * The parent table for table-internal frames.
+     *
+     * @var Table|null
+     */
+    private $table_parent;
+
+    /**
      * Cache for the get_parent while loop results
      *
      * @var Frame
@@ -243,6 +250,7 @@ abstract class AbstractFrameDecorator extends Frame
         $this->_cached_parent = null;
         $this->_block_parent = null;
         $this->_positioned_parent = null;
+        $this->table_parent = null;
 
         // Reset all children
         foreach ($this->get_children() as $child) {
@@ -670,6 +678,38 @@ abstract class AbstractFrameDecorator extends Frame
         }
 
         return $this->_positioned_parent = $p;
+    }
+
+    /**
+     * @return Table|null
+     */
+    public function find_parent_table(): ?Table
+    {
+        if (isset($this->table_parent)) {
+            return $this->table_parent;
+        }
+
+        $p = $this->get_parent();
+
+        while ($p) {
+            if ($p->is_table()) {
+                break;
+            }
+
+            $p = $p->get_parent();
+        }
+
+        return $p;
+    }
+
+    /**
+     * Save the parent table for table-internal frames.
+     *
+     * @param Table $table
+     */
+    public function set_parent_table(Table $table): void
+    {
+        $this->table_parent = $table;
     }
 
     /**

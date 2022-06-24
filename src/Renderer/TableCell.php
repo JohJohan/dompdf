@@ -8,6 +8,7 @@
 namespace Dompdf\Renderer;
 
 use Dompdf\Frame;
+use Dompdf\FrameDecorator\TableCell as TableCellFrameDecorator;
 use Dompdf\FrameDecorator\Table;
 
 /**
@@ -19,7 +20,7 @@ class TableCell extends Block
 {
 
     /**
-     * @param Frame $frame
+     * @param TableCellFrameDecorator $frame
      */
     function render(Frame $frame)
     {
@@ -32,7 +33,7 @@ class TableCell extends Block
         $this->_set_opacity($frame->get_opacity($style->opacity));
 
         $border_box = $frame->get_border_box();
-        $table = Table::find_parent_table($frame);
+        $table = $frame->find_parent_table();
 
         if ($table->get_style()->border_collapse !== "collapse") {
             $this->_render_background($frame, $border_box);

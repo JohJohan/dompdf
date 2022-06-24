@@ -493,7 +493,7 @@ class Page extends AbstractFrameDecorator
                     // Rule B (table row)
                     // Check if the page_break_inside property is not 'avoid'
                     // for the parent table or any of its ancestors
-                    $table = Table::find_parent_table($frame);
+                    $table = $frame->find_parent_table();
 
                     $p = $table;
                     while ($p) {

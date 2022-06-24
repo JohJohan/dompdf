@@ -149,24 +149,6 @@ class Table extends AbstractFrameDecorator
     }
 
     /**
-     * Static function to locate the parent table of a frame
-     *
-     * @param Frame $frame
-     *
-     * @return Table the table that is an ancestor of $frame
-     */
-    public static function find_parent_table(Frame $frame)
-    {
-        while ($frame = $frame->get_parent()) {
-            if ($frame->is_table()) {
-                break;
-            }
-        }
-
-        return $frame;
-    }
-
-    /**
      * Return this table's Cellmap
      *
      * @return Cellmap

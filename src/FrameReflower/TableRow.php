@@ -8,7 +8,6 @@
 namespace Dompdf\FrameReflower;
 
 use Dompdf\FrameDecorator\Block as BlockFrameDecorator;
-use Dompdf\FrameDecorator\Table as TableFrameDecorator;
 use Dompdf\FrameDecorator\TableRow as TableRowFrameDecorator;
 use Dompdf\Exception;
 
@@ -65,7 +64,7 @@ class TableRow extends AbstractFrameReflower
             return;
         }
 
-        $table = TableFrameDecorator::find_parent_table($this->_frame);
+        $table = $frame->find_parent_table();
         $cellmap = $table->get_cellmap();
         $style->set_used("width", $cellmap->get_frame_width($this->_frame));
         $style->set_used("height", $cellmap->get_frame_height($this->_frame));

@@ -538,10 +538,13 @@ class Cellmap
      */
     public function add_frame(Frame $frame): void
     {
+        $collapse = $this->_table->get_style()->border_collapse === "collapse";
         $style = $frame->get_style();
         $display = $style->display;
 
-        $collapse = $this->_table->get_style()->border_collapse === "collapse";
+        if ($frame !== $this->_table) {
+            $frame->set_parent_table($this->_table);
+        }
 
         // Recursively add the frames within the table, its row groups and rows
         if ($frame === $this->_table

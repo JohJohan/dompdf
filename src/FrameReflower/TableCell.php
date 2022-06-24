@@ -8,7 +8,7 @@
 namespace Dompdf\FrameReflower;
 
 use Dompdf\FrameDecorator\Block as BlockFrameDecorator;
-use Dompdf\FrameDecorator\Table as TableFrameDecorator;
+use Dompdf\FrameDecorator\TableCell as TableCellFrameDecorator;
 use Dompdf\Helpers;
 
 /**
@@ -32,12 +32,14 @@ class TableCell extends Block
      */
     function reflow(BlockFrameDecorator $block = null)
     {
+        /** @var TableCellFrameDecorator */
+        $frame = $this->_frame;
+        $table = $frame->find_parent_table();
+
         // Counters and generated content
         $this->_set_content();
 
         $style = $this->_frame->get_style();
-
-        $table = TableFrameDecorator::find_parent_table($this->_frame);
         $cellmap = $table->get_cellmap();
 
         list($x, $y) = $cellmap->get_frame_position($this->_frame);
